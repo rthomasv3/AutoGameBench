@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+	
+  <PropertyGroup>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CoreHook" Version="1.0.4" />
+    <PackageReference Include="CoreHook.IPC" Version="1.0.1" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.3.4" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.3.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <NativeLibs Remove="D3D11Hook.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <NativeLibs Remove="DXGISwapChainVTable.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="corehook32.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="corehook64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;$(OutDir)\&quot; &quot;$(SolutionDir)\.tmp\&quot; /Y /I" />
+  </Target>
+
+</Project>

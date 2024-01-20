@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CoreHook.IPC" Version="1.0.1" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <PackageReference Include="Reloaded.Injector" Version="1.2.5" />
+    <PackageReference Include="VdfConverter" Version="1.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <NativeLibs Remove="GameLibrary.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AssemblyLoader\AssemblyLoader.csproj" />
+    <ProjectReference Include="..\Hook\Hook.csproj" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;$(SolutionDir)\.tmp\&quot; &quot;$(OutDir)&quot; /Y /I &amp;&amp; rmdir /S /Q &quot;$(SolutionDir)\.tmp&quot;" />
+  </Target>
+
+</Project>
