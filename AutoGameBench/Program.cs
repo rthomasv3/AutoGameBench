@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
+using AutoGameBench.Automation;
 using AutoGameBench.IPC;
 using AutoGameBench.Steam;
 using Reloaded.Injector;
@@ -12,6 +14,8 @@ namespace AutoGameBench;
 
 internal class Program
 {
+    private static readonly string _loaderLibraryPath = Path.Combine(Environment.CurrentDirectory, "AssemblyLoaderNE.dll");
+
     private static GameLibrary _gameLibrary = new GameLibrary();
     private static IpcServer _ipcServer = new IpcServer();
 
@@ -20,13 +24,13 @@ internal class Program
         Console.Write("Games:\n");
 
         int index = 0;
-        int selectedGame = -1;
+        int gameSelection = -1;
         foreach (App app in _gameLibrary.Apps)
         {
             Console.WriteLine($"{++index}:\t{app.AppState.Name}");
         }
 
-        while (selectedGame < 0)
+        while (gameSelection < 0)
         {
             Console.Write("Select a game (enter number): ");
             string game = Console.ReadLine();
@@ -34,21 +38,71 @@ internal class Program
             {
                 if (gameIndex > 0 && gameIndex <= _gameLibrary.Apps.Count)
                 {
-                    selectedGame = gameIndex - 1;
+                    gameSelection = gameIndex - 1;
                 }
             }
         }
 
-        Process gameProcess = StartGame(_gameLibrary.Apps[selectedGame]);
+        App selectedApp = _gameLibrary.Apps[gameSelection];
+
+        Console.Write("\nAvailable Jobs:\n");
+
+        JobRunner jobRunner = new(_ipcServer);
+
+        index = 0;
+        int jobSelection = -1;
+        IReadOnlyList<Job> gameJobs = jobRunner.GetJobsForGame(selectedApp.AppState.AppId);
+        foreach (Job job in gameJobs)
+        {
+            Console.WriteLine($"{++index}:\t{job.Name}");
+        }
+
+        while (jobSelection < 0)
+        {
+            Console.Write("Select a job (enter number): ");
+            string job = Console.ReadLine();
+            if (Int32.TryParse(job, out int jobIndex))
+            {
+                if (jobIndex > 0 && jobIndex <= gameJobs.Count)
+                {
+                    jobSelection = jobIndex - 1;
+                }
+            }
+        }
+
+        Job selectedJob = gameJobs[jobSelection];
+
+        Process gameProcess = StartGame(_gameLibrary.Apps[gameSelection]);
 
         if (gameProcess != null)
         {
-            AttachToProcess(gameProcess);
+            if (TryAttachToProcess(gameProcess, out Injector injector))
+            {
+                JobResult result = jobRunner.RunJob(selectedJob, gameProcess.MainWindowHandle);
+                
+                Console.WriteLine("Result:");
+
+                string resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions()
+                {
+                    WriteIndented = true
+                });
+
+                File.WriteAllText($"Automation\\{selectedJob.GameId}_{DateTime.Now.Ticks}.json", resultJson);
+
+                Console.WriteLine(resultJson);
+
+                if (TryDetachFromProcess(injector))
+                {
+                    gameProcess.Kill();
+                }
+            }
         }
 
-        Thread.Sleep(1000);
-
+        jobRunner.Dispose();
         _ipcServer.Dispose();
+
+        Console.WriteLine("Complete. Press any key to exit.");
+        Console.Read();
     }
 
     static Process StartGame(App game)
@@ -102,17 +156,72 @@ internal class Program
         }
     }
 
+    static bool TryAttachToProcess(Process process, out Injector injector)
+    {
+        bool success = false;
+        injector = null;
+
+        try
+        {
+            injector = new(process);
+
+            string libraryPath = Path.Combine(Environment.CurrentDirectory, "AssemblyLoaderNE.dll");
+            long address = injector.Inject(libraryPath);
+
+            if (address > 0)
+            {
+                Console.WriteLine("Injected.");
+
+                bool started = injector.CallFunction<int>(libraryPath, "StartHook", (int)process.MainWindowHandle) > 0;
+
+                if (started)
+                {
+                    Console.WriteLine("Hook Complete.");
+                    success = true;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.ToString());
+        }
+
+        return success;
+    }
+
+    static bool TryDetachFromProcess(Injector injector)
+    {
+        bool success = false;
+
+        try
+        {
+            bool stopped = injector.CallFunction<int>(_loaderLibraryPath, "StopHook") > 0;
+
+            if (stopped)
+            {
+                Console.WriteLine("Hook Stopped.");
+                success = injector.Eject(_loaderLibraryPath);
+                injector.Dispose();
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.ToString());
+        }
+
+        return success;
+    }
+
     static void AttachToProcess(Process process)
     {
-        string libraryPath = Path.Combine(Environment.CurrentDirectory, "AssemblyLoaderNE.dll");
         using Injector injector = new(process);
-        long address = injector.Inject(libraryPath);
+        long address = injector.Inject(_loaderLibraryPath);
 
         if (address > 0)
         {
             Console.WriteLine("Injected.");
 
-            bool started = injector.CallFunction<int>(libraryPath, "StartHook", (int)process.MainWindowHandle) > 0;
+            bool started = injector.CallFunction<int>(_loaderLibraryPath, "StartHook", (int)process.MainWindowHandle) > 0;
 
             if (started)
             {
@@ -120,7 +229,7 @@ internal class Program
 
                 Thread.Sleep(5000);
 
-                bool stopped = injector.CallFunction<int>(libraryPath, "StopHook") > 0;
+                bool stopped = injector.CallFunction<int>(_loaderLibraryPath, "StopHook") > 0;
 
                 if (stopped)
                 {
@@ -132,7 +241,7 @@ internal class Program
 
             try
             {
-                injector.Eject(libraryPath);
+                injector.Eject(_loaderLibraryPath);
             }
             catch { }
 

@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 using Hook.DX11;
+using Hook.DX12;
 
 namespace Hook;
 
@@ -16,7 +17,7 @@ public class HookEntry
 
     #region Fields
 
-    private readonly Logger _logger;
+    private readonly IpcClient _ipcClient;
     private IGraphicsHook _graphicsHook;
 
     #endregion
@@ -25,7 +26,7 @@ public class HookEntry
 
     public HookEntry()
     {
-        _logger = new Logger();
+        _ipcClient = new IpcClient();
     }
 
     #endregion
@@ -36,14 +37,15 @@ public class HookEntry
     {
         try
         {
-            _logger.Log("Hook Entered.");
+            _ipcClient.Log("Hook Entered.");
 
             DirectXVersion directXVersion = DetectDirectXVersion();
 
             _graphicsHook = directXVersion switch
             {
-                DirectXVersion.Direct3D11_1 => new D3D11Hook(windowHandle, _logger),
-                DirectXVersion.Direct3D11 => new D3D11Hook(windowHandle, _logger),
+                DirectXVersion.Direct3D12 => new D3D12Hook(windowHandle, _ipcClient),
+                DirectXVersion.Direct3D11_1 => new D3D11Hook(windowHandle, _ipcClient),
+                DirectXVersion.Direct3D11 => new D3D11Hook(windowHandle, _ipcClient),
                 _ => null
             };
 
@@ -54,7 +56,7 @@ public class HookEntry
         }
         catch (Exception e)
         {
-            _logger.Log(e.ToString());
+            _ipcClient.Log(e.ToString());
         }
 
         return 1;
@@ -67,8 +69,8 @@ public class HookEntry
             _graphicsHook.Unhook();
         }
 
-        _logger.Log("Hook Stopped.");
-        _logger.Dispose();
+        _ipcClient.Log("Hook Stopped.");
+        _ipcClient.Dispose();
 
         return 1;
     }
@@ -86,6 +88,7 @@ public class HookEntry
         IntPtr d3D10_1Loaded = IntPtr.Zero;
         IntPtr d3D11Loaded = IntPtr.Zero;
         IntPtr d3D11_1Loaded = IntPtr.Zero;
+        IntPtr d3D12Loaded = IntPtr.Zero;
 
         int delayTime = 100;
         int retryCount = 0;
@@ -102,9 +105,14 @@ public class HookEntry
             d3D10_1Loaded = GetModuleHandle("d3d10_1.dll");
             d3D11Loaded = GetModuleHandle("d3d11.dll");
             d3D11_1Loaded = GetModuleHandle("d3d11_1.dll");
+            d3D12Loaded = GetModuleHandle("d3d12.dll");
             Thread.Sleep(delayTime);
         }
 
+        if (d3D12Loaded != IntPtr.Zero)
+        {
+            version = DirectXVersion.Direct3D12;
+        }
         if (d3D11_1Loaded != IntPtr.Zero)
         {
             version = DirectXVersion.Direct3D11_1;
@@ -126,7 +134,7 @@ public class HookEntry
             version = DirectXVersion.Direct3D9;
         }
 
-        _logger.Log($"DirectXVersion: {version}");
+        _ipcClient.Log($"DirectXVersion: {version}");
 
         return version;
     }

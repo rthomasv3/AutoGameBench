@@ -7,9 +7,11 @@
 
   <ItemGroup>
     <PackageReference Include="CoreHook.IPC" Version="1.0.1" />
+    <PackageReference Include="InputSimulatorEx" Version="2.1.1" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Reloaded.Injector" Version="1.2.5" />
     <PackageReference Include="VdfConverter" Version="1.0.3" />
+    <PackageReference Include="YamlDotNet" Version="13.7.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,8 +23,14 @@
     <ProjectReference Include="..\Hook\Hook.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Automation\Jobs\RE4POC.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;$(SolutionDir)\.tmp\&quot; &quot;$(OutDir)&quot; /Y /I &amp;&amp; rmdir /S /Q &quot;$(SolutionDir)\.tmp&quot;" />
+    <Exec Command="xcopy &quot;$(SolutionDir)\.tmp\&quot; &quot;$(OutDir)&quot; /Y &amp;&amp; rmdir /S /Q &quot;$(SolutionDir)\.tmp&quot;" />
   </Target>
 
 </Project>

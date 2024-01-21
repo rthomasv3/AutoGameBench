@@ -50,7 +50,7 @@ internal class GameLibrary
 
     public IReadOnlyList<App> Apps
     {
-        get { return _apps; }
+        get { return _apps.AsReadOnly(); }
     }
 
     public string SteamExePath

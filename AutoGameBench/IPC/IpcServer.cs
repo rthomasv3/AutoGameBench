@@ -6,11 +6,17 @@ using CoreHook.IPC.Transport;
 
 namespace AutoGameBench.IPC;
 
-internal class IpcServer : IDisposable
+public sealed class IpcServer : IDisposable
 {
     #region Fields
 
     private readonly INamedPipe _pipeServer;
+
+    #endregion
+
+    #region Events
+
+    public event EventHandler<FrameTimeEventArgs> FrameTimeReceived;
 
     #endregion
 
@@ -46,7 +52,7 @@ internal class IpcServer : IDisposable
 
     private void HandleMessage(IMessage message, ITransportChannel transport)
     {
-        string response = "Ok";
+        string response = "ok";
 
         if (String.Equals(message.Header, "Log", StringComparison.OrdinalIgnoreCase))
         {
@@ -56,6 +62,18 @@ internal class IpcServer : IDisposable
         if (String.Equals(message.Header, "Dir", StringComparison.OrdinalIgnoreCase))
         {
             response = Environment.CurrentDirectory;
+        }
+
+        if (String.Equals(message.Header, "FT", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Double.TryParse(message.Body, out double frameTime))
+            {
+                FrameTimeEventArgs args = new()
+                {
+                    FrameTime = frameTime
+                };
+                FrameTimeReceived?.Invoke(this, args);
+            }
         }
 
         SendMessage(transport.MessageHandler, "Response", response);

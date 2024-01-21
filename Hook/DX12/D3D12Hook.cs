@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Vortice.Direct3D;
-using Vortice.Direct3D11;
 using Vortice.DXGI;
 
-namespace Hook.DX11;
+namespace Hook.DX12;
 
-public class D3D11Hook : IGraphicsHook
+public sealed class D3D12Hook : IGraphicsHook
 {
     #region Delegates
 
@@ -29,11 +28,15 @@ public class D3D11Hook : IGraphicsHook
 
     #region Constructor
 
-    public D3D11Hook(nint windowHandle, IpcClient ipcClient)
+    public D3D12Hook(nint windowHandle, IpcClient ipcClient)
     {
         _ipcClient = ipcClient;
         Initialize(windowHandle);
     }
+
+    #endregion
+
+    #region Properties
 
     #endregion
 
@@ -79,11 +82,11 @@ public class D3D11Hook : IGraphicsHook
             SwapEffect = SwapEffect.Discard,
             BufferUsage = Usage.RenderTargetOutput
         };
-
-        D3D11.D3D11CreateDeviceAndSwapChain(
+        
+        Vortice.Direct3D11.D3D11.D3D11CreateDeviceAndSwapChain(
             null,
             DriverType.Hardware,
-            DeviceCreationFlags.BgraSupport,
+            Vortice.Direct3D11.DeviceCreationFlags.BgraSupport,
             null,
             descrip,
             out IDXGISwapChain swapChain,
@@ -100,66 +103,9 @@ public class D3D11Hook : IGraphicsHook
 
         swapChain.Dispose();
 
-        _presentAddress = vTableAddresses[(int)DXGISwapChainVTable.Present];
+        _presentAddress = vTableAddresses[(int)DX11.DXGISwapChainVTable.Present];
 
         _ipcClient.Log($"Got present address: {_presentAddress}");
-    }
-
-    private nint GetPresentAddress_Old()
-    {
-        FeatureLevel[] featureLevels = new[]
-        {
-            FeatureLevel.Level_11_1,
-            FeatureLevel.Level_11_0,
-            FeatureLevel.Level_10_1,
-            FeatureLevel.Level_10_0
-        };
-
-        D3D11.D3D11CreateDevice(
-            null,
-            DriverType.Hardware,
-            DeviceCreationFlags.BgraSupport | DeviceCreationFlags.Debug,
-            featureLevels,
-            out ID3D11Device tempDevice,
-            out ID3D11DeviceContext _).CheckError();
-
-        SwapChainDescription1 chainDescription = new()
-        {
-            Stereo = false,
-            Width = 800,
-            Height = 600,
-            BufferCount = 2,
-            BufferUsage = Usage.RenderTargetOutput,
-            Format = Format.B8G8R8A8_UNorm,
-            SampleDescription = new SampleDescription(1, 0),
-            Scaling = Scaling.Stretch,
-            AlphaMode = AlphaMode.Premultiplied,
-            Flags = SwapChainFlags.None,
-            SwapEffect = SwapEffect.FlipSequential,
-        };
-
-        IDXGIDevice dxgiDevice = tempDevice.QueryInterface<IDXGIDevice>();
-        IDXGIAdapter1 dxgiAdapter = dxgiDevice.GetParent<IDXGIAdapter1>();
-        IDXGIFactory2 dxgiFactory2 = dxgiAdapter.GetParent<IDXGIFactory2>();
-        IDXGISwapChain1 swapChain = dxgiFactory2.CreateSwapChainForComposition(tempDevice, chainDescription, null);
-
-        List<nint> vtblAddresses = new List<nint>();
-        nint vTable = Marshal.ReadIntPtr(swapChain.NativePointer);
-        for (int i = 0; i < 18; ++i)
-        {
-            vtblAddresses.Add(Marshal.ReadIntPtr(vTable, i * nint.Size));
-        }
-
-        try
-        {
-            dxgiFactory2.Dispose();
-            dxgiAdapter.Dispose();
-            dxgiDevice.Dispose();
-            swapChain.Dispose();
-        }
-        catch { }
-
-        return vtblAddresses[8];
     }
 
     private int PresentHook(nint swapChainPtr, int syncInterval, PresentFlags flags)

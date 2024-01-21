@@ -1,0 +1,63 @@
+﻿name: RE4 POC
+gameId: 2050650
+actionDelay: 2000 # Default is 3000 ms
+
+initialization:
+  startDelay: 70000
+  actions:
+    - name: KeyPress
+      with: 
+        key: return
+    - name: KeyPress
+      with: 
+        key: return
+    - name: KeyPress
+      with: 
+        key: return
+    - name: Delay
+      with: 
+        time: 15000
+
+actions:
+- name: Delay
+  with: 
+    time: 5000
+- name: KeyPress
+  with: 
+    key: q
+- name: MouseDown
+  with:
+    button: right
+- name: MouseClick
+  with:
+    button: left
+- name: MouseUp
+  with:
+    button: right
+- name: KeyPress
+  with: 
+    key: r
+- name: Delay
+  with: 
+    time: 5000
+
+cleanup:
+  actions:
+    - name: KeyPress
+      with: 
+        key: escape
+    - name: KeyPress
+      with: 
+        key: up
+    - name: KeyPress
+      with: 
+        key: return
+    - name: KeyPress
+      with: 
+        key: up
+    - name: KeyPress
+      with: 
+        key: return
+    - name: Delay
+      with: 
+        time: 5000
