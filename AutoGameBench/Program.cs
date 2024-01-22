@@ -21,10 +21,11 @@ internal class Program
 
     static void Main(string[] args)
     {
-        Console.Write("Games:\n");
+        Console.Write("Games:\n0\tCustom EXE\n");
 
         int index = 0;
         int gameSelection = -1;
+        string gameExePath = String.Empty;
         foreach (App app in _gameLibrary.Apps)
         {
             Console.WriteLine($"{++index}:\t{app.AppState.Name}");
@@ -40,10 +41,20 @@ internal class Program
                 {
                     gameSelection = gameIndex - 1;
                 }
+                else if (gameIndex == 0)
+                {
+                    Console.Write("Enter EXE path: ");
+                    gameExePath = Console.ReadLine();
+
+                    if (File.Exists(gameExePath))
+                    {
+                        break;
+                    }
+                }
             }
         }
 
-        App selectedApp = _gameLibrary.Apps[gameSelection];
+        App selectedApp = gameSelection > -1 ? _gameLibrary.Apps[gameSelection] : null;
 
         Console.Write("\nAvailable Jobs:\n");
 
@@ -51,7 +62,7 @@ internal class Program
 
         index = 0;
         int jobSelection = -1;
-        IReadOnlyList<Job> gameJobs = jobRunner.GetJobsForGame(selectedApp.AppState.AppId);
+        IReadOnlyList<Job> gameJobs = jobRunner.GetJobsForGame(selectedApp?.AppState?.AppId);
         foreach (Job job in gameJobs)
         {
             Console.WriteLine($"{++index}:\t{job.Name}");
@@ -70,12 +81,21 @@ internal class Program
             }
         }
 
-        Job selectedJob = gameJobs[jobSelection];
+        Process gameProcess = null;
 
-        Process gameProcess = StartGame(_gameLibrary.Apps[gameSelection]);
+        if (selectedApp != null)
+        {
+            gameProcess = StartGame(selectedApp);
+        }
+        else
+        {
+            gameProcess = StartGame(gameExePath);
+        }
 
         if (gameProcess != null)
         {
+            Job selectedJob = gameJobs[jobSelection];
+
             if (TryAttachToProcess(gameProcess, out Injector injector))
             {
                 JobResult result = jobRunner.RunJob(selectedJob, gameProcess.MainWindowHandle);
@@ -103,6 +123,11 @@ internal class Program
 
         Console.WriteLine("Complete. Press any key to exit.");
         Console.Read();
+    }
+
+    static Process StartGame(string gameExePath)
+    {
+        return Process.Start(gameExePath);
     }
 
     static Process StartGame(App game)

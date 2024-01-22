@@ -91,7 +91,16 @@ public sealed class JobRunner : IDisposable
 
             CleanupJob(job);
 
-            List<double> orderedFrameTimes = _frameTimes.OrderByDescending(x => x).ToList();
+            double averageFps = 0;
+            double onePercentLow = 0;
+            double pointOnePercentLow = 0;
+            if (_frameTimes?.Any() == true)
+            {
+                List<double> orderedFrameTimes = _frameTimes.OrderByDescending(x => x).ToList();
+                averageFps = 1000.0 / Math.Max(1.0, _frameTimes.Average());
+                onePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.1)).Average());
+                pointOnePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.01)).Average());
+            }
 
             result = new JobResult()
             {
@@ -100,9 +109,9 @@ public sealed class JobRunner : IDisposable
                 StartTime = startTime,
                 InitializationCompleteTime = initializationCompleteTime,
                 EndTime = DateTime.Now,
-                AverageFps = 1000.0 / Math.Max(1.0, _frameTimes.Average()),
-                OnePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.1)).Average()),
-                PointOnePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.01)).Average()),
+                AverageFps = averageFps,
+                OnePercentLow = onePercentLow,
+                PointOnePercentLow = pointOnePercentLow,
                 Success = true
             };
         }
@@ -193,9 +202,10 @@ public sealed class JobRunner : IDisposable
                 RunAction(action, job.ActionDelay);
             }
 
-            _jobInitialized = true;
             Console.WriteLine("Initialization Complete.");
         }
+
+        _jobInitialized = true;
     }
 
     private void CenterMouse(nint windowHandle)
