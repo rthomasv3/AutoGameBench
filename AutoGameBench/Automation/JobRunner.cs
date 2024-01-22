@@ -59,7 +59,8 @@ public sealed class JobRunner : IDisposable
     public IReadOnlyList<Job> GetJobsForGame(string gameId)
     {
         return _jobs
-            .Where(x => String.Equals(x.GameId, gameId, StringComparison.OrdinalIgnoreCase))
+            .Where(x => String.IsNullOrEmpty(x.GameId) ||
+                        String.Equals(x.GameId, gameId, StringComparison.OrdinalIgnoreCase))
             .ToList()
             .AsReadOnly();
     }
@@ -90,6 +91,8 @@ public sealed class JobRunner : IDisposable
 
             CleanupJob(job);
 
+            List<double> orderedFrameTimes = _frameTimes.OrderByDescending(x => x).ToList();
+
             result = new JobResult()
             {
                 JobName = job.Name,
@@ -98,8 +101,8 @@ public sealed class JobRunner : IDisposable
                 InitializationCompleteTime = initializationCompleteTime,
                 EndTime = DateTime.Now,
                 AverageFps = 1000.0 / Math.Max(1.0, _frameTimes.Average()),
-                OnePercentLow = 1000.0 / Math.Max(1.0, _frameTimes.OrderByDescending(x => x).Take((int)(_frameTimes.Count * 0.1)).Average()),
-                PointOnePercentLow = 1000.0 / Math.Max(1.0, _frameTimes.OrderByDescending(x => x).Take((int)(_frameTimes.Count * 0.01)).Average()),
+                OnePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.1)).Average()),
+                PointOnePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.01)).Average()),
                 Success = true
             };
         }

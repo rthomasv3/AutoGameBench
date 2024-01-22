@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,13 +25,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Automation\Jobs\BasicExample.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Automation\Jobs\RE4POC.yaml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;$(SolutionDir)\.tmp\&quot; &quot;$(OutDir)&quot; /Y &amp;&amp; rmdir /S /Q &quot;$(SolutionDir)\.tmp&quot;" />
+    <Exec Command="xcopy &quot;$(SolutionDir)\.tmp\&quot; &quot;$(OutDir)&quot; /Y" />
   </Target>
 
 </Project>

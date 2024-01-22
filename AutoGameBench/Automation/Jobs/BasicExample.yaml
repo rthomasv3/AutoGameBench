@@ -1,0 +1,49 @@
+﻿name: Basic Example
+actionDelay: 0 # Default is 3000 ms
+
+initialization:
+  startDelay: 30000
+
+actions:
+  - name: KeyDown
+    with: 
+      key: a
+  - name: Delay
+    with: 
+      time: 800
+  - name: KeyUp
+    with: 
+      key: a
+  - name: KeyDown
+    with: 
+      key: s
+  - name: Delay
+    with: 
+      time: 800
+  - name: KeyUp
+    with: 
+      key: s
+  - name: KeyDown
+    with: 
+      key: d
+  - name: Delay
+    with: 
+      time: 800
+  - name: KeyUp
+    with: 
+      key: d
+  - name: KeyDown
+    with: 
+      key: w
+  - name: Delay
+    with: 
+      time: 800
+  - name: KeyUp
+    with: 
+      key: w
+
+cleanup:
+  actions:
+    - name: Delay
+      with: 
+        time: 1000
