@@ -109,29 +109,29 @@ public class HookEntry
             Thread.Sleep(delayTime);
         }
 
-        if (d3D12Loaded != IntPtr.Zero)
+        if (d3D9Loaded != IntPtr.Zero)
         {
-            version = DirectXVersion.Direct3D12;
-        }
-        if (d3D11_1Loaded != IntPtr.Zero)
-        {
-            version = DirectXVersion.Direct3D11_1;
-        }
-        if (d3D11Loaded != IntPtr.Zero)
-        {
-            version = DirectXVersion.Direct3D11;
-        }
-        if (d3D10_1Loaded != IntPtr.Zero)
-        {
-            version = DirectXVersion.Direct3D10_1;
+            version = DirectXVersion.Direct3D9;
         }
         if (d3D10Loaded != IntPtr.Zero)
         {
             version = DirectXVersion.Direct3D10;
         }
-        if (d3D9Loaded != IntPtr.Zero)
+        if (d3D10_1Loaded != IntPtr.Zero)
         {
-            version = DirectXVersion.Direct3D9;
+            version = DirectXVersion.Direct3D10_1;
+        }
+        if (d3D11Loaded != IntPtr.Zero)
+        {
+            version = DirectXVersion.Direct3D11;
+        }
+        if (d3D11_1Loaded != IntPtr.Zero)
+        {
+            version = DirectXVersion.Direct3D11_1;
+        }
+        if (d3D12Loaded != IntPtr.Zero)
+        {
+            version = DirectXVersion.Direct3D12;
         }
 
         _ipcClient.Log($"DirectXVersion: {version}");

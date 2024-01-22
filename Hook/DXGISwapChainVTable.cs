@@ -1,4 +1,4 @@
-﻿namespace Hook.DX11;
+﻿namespace Hook;
 
 public enum DXGISwapChainVTable : short
 {

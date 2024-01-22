@@ -6,6 +6,7 @@
 	
   <PropertyGroup>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,7 +34,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy &quot;$(OutDir)\&quot; &quot;$(SolutionDir)\.tmp\&quot; /Y /I" />
+    <Exec Command="xcopy &quot;$(OutDir)\&quot; &quot;$(SolutionDir)\.tmp\&quot; /Y /I &amp;&amp; attrib +h &quot;$(SolutionDir)\.tmp&quot; /s /d" />
   </Target>
 
 </Project>
