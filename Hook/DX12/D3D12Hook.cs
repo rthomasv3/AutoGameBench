@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 
@@ -94,7 +95,7 @@ public sealed class D3D12Hook : IGraphicsHook
     #region Delegates
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-    private delegate long DXGISwapChain_PresentDelegate(IntPtr swapChain, uint syncInterval, uint presentFlags);
+    private delegate int DXGISwapChain_PresentDelegate(nint swapChainPtr, int syncInterval, PresentFlags flags);
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
     private delegate int DXGISwapChain_ResizeBuffersDelegate(uint bufferCount, uint width, uint height, Format newFormat, SwapChainFlags swapChainFlags);
@@ -111,6 +112,11 @@ public sealed class D3D12Hook : IGraphicsHook
     private Hook<DXGISwapChain_ResizeBuffersDelegate> _resizeBuffersHook;
     private DateTime _lastUpdateTime = DateTime.UtcNow;
     private IpcClient _ipcClient;
+    private ID3D12Device _device;
+    private IDXGISwapChain3 _swapChain;
+    private ID3D12CommandQueue _commandQueue;
+    private nint _commandQueueOffset;
+    private IntPtr _tempWindowHandle;
 
     #endregion
 
@@ -164,17 +170,34 @@ public sealed class D3D12Hook : IGraphicsHook
             _resizeBuffersHook.Dispose();
             _resizeBuffersHook = null;
         }
+
+        if (_device != null)
+        {
+            _device.Dispose();
+        }
+
+        if (_commandQueue != null)
+        {
+            _commandQueue.Dispose();
+        }
+
+        if (_swapChain != null)
+        {
+            _swapChain.Dispose();
+        }
+
+        if (_tempWindowHandle != IntPtr.Zero)
+        {
+            DestroyWindow(_tempWindowHandle);
+        }
     }
 
     #endregion
 
     #region Private Methods
 
-    private void Initialize(nint windowHandle)
+    private void Initialize(nint parentWindowHandle)
     {
-        D3D12.D3D12CreateDevice(null, out ID3D12Device tempDevice);
-        _ipcClient.Log($"ID3D12Device Loaded: {tempDevice != null}");
-
         SwapChainDescription1 chainDescription = new()
         {
             Stereo = false,
@@ -189,27 +212,40 @@ public sealed class D3D12Hook : IGraphicsHook
             Flags = SwapChainFlags.None,
             SwapEffect = SwapEffect.FlipSequential,
         };
-
-        ID3D12CommandQueue graphicsQueue = tempDevice.CreateCommandQueue(CommandListType.Direct);
-        _ipcClient.Log($"ID3D12CommandQueue Created: {graphicsQueue != null}");
-
-        IDXGIFactory4 dxgiFactory = DXGI.CreateDXGIFactory2<IDXGIFactory4>(true);
+        
+        IDXGIFactory4 dxgiFactory = DXGI.CreateDXGIFactory2<IDXGIFactory4>(false);
         _ipcClient.Log($"IDXGIFactory4 Created: {dxgiFactory != null}");
 
+        IDXGIAdapter1 adapter = GetHardwareAdapter(dxgiFactory);
+        _ipcClient.Log($"IDXGIAdapter1 Found: {adapter != null}");
+
+        if (adapter == null)
+        {
+            D3D12.D3D12CreateDevice(null, FeatureLevel.Level_11_0, out _device);
+            _ipcClient.Log($"ID3D12Device Loaded: {_device != null}");
+        }
+        else
+        {
+            D3D12.D3D12CreateDevice(adapter, FeatureLevel.Level_11_0, out _device);
+            _ipcClient.Log($"ID3D12Device Loaded With Adapter: {_device != null}");
+        }
+
+        _commandQueue = _device.CreateCommandQueue(CommandListType.Direct, 0, CommandQueueFlags.None, 0);
+        _ipcClient.Log($"ID3D12CommandQueue Created: {_commandQueue != null}");
+
         IDXGISwapChain1 tempSwapChain1 = null;
-        IDXGISwapChain3 swapChain = null;
 
         try
         {
-            IntPtr tempWindowHandle = CreateWindow(windowHandle);
-            _ipcClient.Log($"Got Window Handle: {tempWindowHandle}");
+            _tempWindowHandle = CreateWindow(parentWindowHandle);
+            _ipcClient.Log($"Got Window Handle: {_tempWindowHandle}");
 
             SwapChainDescription1 descrip = new()
             {
                 Stereo = false,
-                Width = 0,
-                Height = 0,
-                BufferCount = 3,
+                Width = 100,
+                Height = 100,
+                BufferCount = 2,
                 BufferUsage = Usage.RenderTargetOutput,
                 Format = Format.B8G8R8A8_UNorm,
                 SampleDescription = new SampleDescription(1, 0),
@@ -219,13 +255,13 @@ public sealed class D3D12Hook : IGraphicsHook
                 SwapEffect = SwapEffect.FlipDiscard,
             };
 
-            tempSwapChain1 = dxgiFactory.CreateSwapChainForHwnd(graphicsQueue, tempWindowHandle, descrip);
-            _ipcClient.Log($"IDXGISwapChain1 Created Using Method 1: {tempSwapChain1 != null}");
+            tempSwapChain1 = dxgiFactory.CreateSwapChainForHwnd(_commandQueue, _tempWindowHandle, descrip, null, null);
+            _ipcClient.Log($"IDXGISwapChain1 Created Using Temp Window: {tempSwapChain1 != null}");
 
-            swapChain = tempSwapChain1.QueryInterface<IDXGISwapChain3>();
-            _ipcClient.Log($"IDXGISwapChain3 Found Using Method 1: {swapChain != null}");
+            _swapChain = tempSwapChain1.QueryInterface<IDXGISwapChain3>();
+            _ipcClient.Log($"IDXGISwapChain3 Found: {_swapChain != null}");
 
-            DestroyWindow(tempWindowHandle);
+            dxgiFactory.MakeWindowAssociation(_tempWindowHandle, WindowAssociationFlags.IgnoreAltEnter);
         }
         catch (Exception e)
         {
@@ -234,18 +270,32 @@ public sealed class D3D12Hook : IGraphicsHook
 
         if (tempSwapChain1 == null)
         {
-            tempSwapChain1 = dxgiFactory.CreateSwapChainForComposition(graphicsQueue, chainDescription);
+            tempSwapChain1 = dxgiFactory.CreateSwapChainForComposition(_commandQueue, chainDescription);
             _ipcClient.Log($"IDXGISwapChain1 Created: {tempSwapChain1 != null}");
 
-            swapChain = tempSwapChain1.QueryInterface<IDXGISwapChain3>();
-            _ipcClient.Log($"IDXGISwapChain3 Found: {swapChain != null}");
+            _swapChain = tempSwapChain1.QueryInterface<IDXGISwapChain3>();
+            _ipcClient.Log($"IDXGISwapChain3 Found: {_swapChain != null}");
         }
 
-        List<nint> vTableAddresses = new List<nint>();
-        nint vTable = Marshal.ReadIntPtr(swapChain.NativePointer);
+        for (IntPtr i = IntPtr.Zero; i < 512 * IntPtr.Size; i += IntPtr.Size)
+        {
+            nint offsetPointer = ((nint)_swapChain) + i;
+
+            ID3D12CommandQueue tempQueue = (ID3D12CommandQueue)offsetPointer;
+
+            if (tempQueue != null && (tempQueue.Equals(_commandQueue) || tempQueue == _commandQueue))
+            {
+                _commandQueueOffset = i;
+                _ipcClient.Log($"Command Queue Offset Found: {_commandQueueOffset}");
+                break;
+            }
+        }
+
+        List<IntPtr> vTableAddresses = new List<IntPtr>();
+        IntPtr vTable = Marshal.ReadIntPtr(_swapChain.NativePointer);
         for (int i = 0; i < DXGI_SWAPCHAIN_METHOD_COUNT; ++i)
         {
-            vTableAddresses.Add(Marshal.ReadIntPtr(vTable, i * nint.Size));
+            vTableAddresses.Add(Marshal.ReadIntPtr(vTable, i * IntPtr.Size));
         }
 
         _presentAddress = vTableAddresses[(int)DXGISwapChainVTable.Present]; // Present is 8
@@ -255,16 +305,13 @@ public sealed class D3D12Hook : IGraphicsHook
 
         try
         {
-            tempDevice.Dispose();
-            graphicsQueue.Dispose();
             dxgiFactory.Dispose();
             tempSwapChain1.Dispose();
-            swapChain.Dispose();
         }
         catch { }
     }
 
-    private long PresentHook(IntPtr swapChain, uint syncInterval, uint presentFlags)
+    private int PresentHook(nint swapChainPtr, int syncInterval, PresentFlags flags)
     {
         _ipcClient.Log("Entered Present.");
 
@@ -273,7 +320,7 @@ public sealed class D3D12Hook : IGraphicsHook
 
         _ipcClient.SendFrameTime(frameTime);
 
-        return _presentHook.Original(swapChain, syncInterval, presentFlags);
+        return _presentHook.Original(swapChainPtr, syncInterval, flags);
     }
 
     private int ResizeBuffersHook(uint bufferCount, uint width, uint height, Format newFormat, SwapChainFlags swapChainFlags)
@@ -323,7 +370,6 @@ public sealed class D3D12Hook : IGraphicsHook
     {
         switch (msg)
         {
-            // All GUI painting must be done here
             case WM_PAINT:
                 break;
 
@@ -336,7 +382,34 @@ public sealed class D3D12Hook : IGraphicsHook
             default:
                 break;
         }
+
         return DefWindowProc(hWnd, msg, wParam, lParam);
+    }
+
+    private IDXGIAdapter1 GetHardwareAdapter(IDXGIFactory4 factory)
+    {
+        IDXGIAdapter1 adapter = null;
+
+        IDXGIFactory6 factory6 = factory.QueryInterface<IDXGIFactory6>();
+
+        if (factory6 != null)
+        {
+            GpuPreference gpuPreference = GpuPreference.HighPerformance;
+
+            for (int i = 0; factory6.EnumAdapterByGpuPreference(i, gpuPreference, out IDXGIAdapter1 tempAdapter).Success; ++i)
+            {
+                if (!tempAdapter.Description1.Flags.HasFlag(AdapterFlags.Software))
+                {
+                    if (D3D12.D3D12CreateDevice<ID3D12Device>(tempAdapter, FeatureLevel.Level_11_0, out _ ).Success)
+                    {
+                        adapter = tempAdapter;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return adapter;
     }
 
     #endregion
