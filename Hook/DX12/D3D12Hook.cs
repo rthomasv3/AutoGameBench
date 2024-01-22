@@ -144,11 +144,11 @@ public sealed class D3D12Hook : IGraphicsHook
                 this);
         _presentHook.Activate();
 
-        _resizeBuffersHook = new Hook<DXGISwapChain_ResizeBuffersDelegate>(
-                _resizeBuffersAddress,
-                new DXGISwapChain_ResizeBuffersDelegate(ResizeBuffersHook),
-                this);
-        _resizeBuffersHook.Activate();
+        //_resizeBuffersHook = new Hook<DXGISwapChain_ResizeBuffersDelegate>(
+        //        _resizeBuffersAddress,
+        //        new DXGISwapChain_ResizeBuffersDelegate(ResizeBuffersHook),
+        //        this);
+        //_resizeBuffersHook.Activate();
 
         _ipcClient.Log("DirectX12 Hook Applied.");
     }
@@ -313,8 +313,6 @@ public sealed class D3D12Hook : IGraphicsHook
 
     private int PresentHook(nint swapChainPtr, int syncInterval, PresentFlags flags)
     {
-        _ipcClient.Log("Entered Present.");
-
         double frameTime = (DateTime.UtcNow - _lastUpdateTime).TotalMilliseconds;
         _lastUpdateTime = DateTime.UtcNow;
 
@@ -325,7 +323,6 @@ public sealed class D3D12Hook : IGraphicsHook
 
     private int ResizeBuffersHook(uint bufferCount, uint width, uint height, Format newFormat, SwapChainFlags swapChainFlags)
     {
-        _ipcClient.Log("Entered ResizeBuffers.");
         return _resizeBuffersHook.Original(bufferCount, width, height, newFormat, swapChainFlags);
     }
 
