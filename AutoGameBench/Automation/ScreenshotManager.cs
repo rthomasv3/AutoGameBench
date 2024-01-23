@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using Vortice;
 using NativeMethods = AutoGameBench.Native.Native;
 
 namespace AutoGameBench.Automation;
@@ -40,60 +39,57 @@ public sealed class ScreenshotManager
 
     public string TakeScreenshot(nint windowHandle, string jobName)
     {
+        Rectangle windowRect = NativeMethods.GetWindowRect(windowHandle);
+        return TakeScreenshot(windowRect, jobName);
+    }
+
+    public string TakeScreenshot(Rectangle windowRect, string jobName)
+    {
         string path = null;
 
-        RawRect windowRect = NativeMethods.GetWindowRect(windowHandle);
-
-        int width = windowRect.Right - windowRect.Left;
-        int height = windowRect.Bottom - windowRect.Top - _headerHeight - _shadowHeight;
-
-        Console.WriteLine($"x: {windowRect.Left}, y: {windowRect.Top}, width: {width}, height: {height}");
-
-        if (width > 0 && height > 0)
-        {
-            using (Bitmap bitmap = new Bitmap(width, height))
-            {
-                using (Graphics g = Graphics.FromImage(bitmap))
-                {
-                    g.CopyFromScreen(windowRect.Left, windowRect.Top + _headerHeight, 0, 0, bitmap.Size, CopyPixelOperation.SourceCopy);
-                }
-
-                string safeJobName = String.Join("_", jobName.Split(_invalidFileCharacters));
-                path = Path.Combine(_screenshotDirectory, $"{safeJobName}_{DateTime.Now.Ticks}.jpg");
-
-                bitmap.Save(path, ImageFormat.Jpeg);
-            }
-        }
+        using Bitmap bitmap = GetScreenImage(windowRect);
+        string safeJobName = String.Join("_", jobName.Split(_invalidFileCharacters));
+        path = Path.Combine(_screenshotDirectory, $"{safeJobName}_{DateTime.Now.Ticks}.png");
+        bitmap.Save(path, ImageFormat.Png);
 
         return path;
     }
 
-    public string TakeScreenshot(RawRect windowRect, string jobName)
+    public byte[] TakeScreenshot(nint windowHandle)
     {
-        string path = null;
+        byte[] imageBytes = null;
 
-        int width = windowRect.Right - windowRect.Left;
-        int height = windowRect.Bottom - windowRect.Top - _headerHeight - _shadowHeight;
+        Rectangle windowRect = NativeMethods.GetWindowRect(windowHandle);
+        using Bitmap bitmap = GetScreenImage(windowRect);
+        using MemoryStream ms = new MemoryStream();
+        bitmap.Save(ms, ImageFormat.Png);
+        imageBytes = ms.ToArray();
 
-        Console.WriteLine($"x: {windowRect.Left}, y: {windowRect.Top}, width: {width}, height: {height}");
+        return imageBytes;
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private Bitmap GetScreenImage(Rectangle windowRect)
+    {
+        Bitmap bitmap = null;
+
+        int width = windowRect.Width;
+        int height = windowRect.Height - _headerHeight - _shadowHeight;
 
         if (width > 0 && height > 0)
         {
-            using (Bitmap bitmap = new Bitmap(width, height))
+            bitmap = new Bitmap(width, height);
+
+            using (Graphics g = Graphics.FromImage(bitmap))
             {
-                using (Graphics g = Graphics.FromImage(bitmap))
-                {
-                    g.CopyFromScreen(windowRect.Left, windowRect.Top + _headerHeight, 0, 0, bitmap.Size, CopyPixelOperation.SourceCopy);
-                }
-
-                string safeJobName = String.Join("_", jobName.Split(_invalidFileCharacters));
-                path = Path.Combine(_screenshotDirectory, $"{safeJobName}_{DateTime.Now.Ticks}.jpg");
-
-                bitmap.Save(path, ImageFormat.Jpeg);
+                g.CopyFromScreen(windowRect.Left, windowRect.Top + _headerHeight, 0, 0, bitmap.Size, CopyPixelOperation.SourceCopy);
             }
         }
 
-        return path;
+        return bitmap;
     }
 
     #endregion

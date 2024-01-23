@@ -148,13 +148,10 @@ internal class Program
         Process steamProcess = Process.Start(_gameLibrary.SteamExePath, $"steam://launch/{game.AppState.AppId}");
         steamProcess.WaitForExit();
 
-        // Wait for the game process to start
-        Thread.Sleep(1000);
-
         int retryCount = 0;
         while (gameProcess == null && retryCount < 10)
         {
-            Thread.Sleep(1000);
+            Thread.Sleep(1250);
 
             gameProcess = Process.GetProcesses().Where(x => possibleGameExecutables.Contains(x.ProcessName)).FirstOrDefault();
 
