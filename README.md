@@ -7,7 +7,18 @@ The core idea is simple - hook into the rendering library to collect frame and p
 
 ## Prerequisites
 
-A Windows PC with the [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) installed.
+A Windows PC with [.NET 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) Runtime installed. To build you'll need the SDK.
+
+
+## Build and Run
+
+Pull down the source code and run the following command in the solution directory:
+
+```
+dotnet build -c Release
+```
+
+Then just run `AutoGameBench.exe`.
 
 
 ## Current State
@@ -26,7 +37,6 @@ A job is broken down into the following steps:
     * Frame timings are not recorded during this step.
 
 
-
 ### Features:
 1. Read your steam libraries.
 2. Launch games.
@@ -34,6 +44,8 @@ A job is broken down into the following steps:
 4. Load additional assemblies via a plugin pattern (including all dependencies).
 5. Intercept DirectX 11 and 12 Present call to get performance info.
 6. Run basic actions in a game by simulating mouse and keyboard inputs.
+8. Check for and recognize any text that appears in game (English only right now).
+9. Take screenshots.
 
 
 ### Example
@@ -46,51 +58,77 @@ A very simple example job for Resident Evil 4 Remake is included. The script wil
 {
   "JobName": "RE4 POC",
   "GameId": "2050650",
-  "StartTime": "2024-01-21T15:48:38.8246086-06:00",
-  "InitializationCompleteTime": "2024-01-21T15:50:16.5896413-06:00",
-  "EndTime": "2024-01-21T15:51:11.9400199-06:00",
-  "AverageFps": 72.59055073408857,
-  "OnePercentLow": 65.66187745945314,
-  "PointOnePercentLow": 62.911318489693706,
+  "StartTime": "2024-01-23T14:33:11.8072171-06:00",
+  "InitializationCompleteTime": "2024-01-23T14:34:35.8993021-06:00",
+  "ActionsCompleteTime": "2024-01-23T14:35:02.3325388-06:00",
+  "EndTime": "2024-01-23T14:35:19.6902563-06:00",
+  "AverageFps": 68.69113279140942,
+  "OnePercentLow": 62.5374706557603,
+  "PointOnePercentLow": 59.19403376756543,
+  "Screenshots": [
+    "Automation\\Screenshots\\RE4_POC_638416172759319286.png"
+  ],
   "Success": true,
   "Error": null
 }
 ```
 
-**Full Output**:
+**Full Output Log**:
 
 ```
 Games:
-1:      Sea of Stars
-2:      Resident Evil 4
-3:      Steamworks Common Redistributables
-Select a game (enter number): 2
+0       Custom EXE
+1:      DARK SOULST III
+2:      Remnant II
+3:      Resident Evil 4
+4:      Sea of Stars
+5:      Steamworks Common Redistributables
+6:      The Last of UsT Part I
+Select a game (enter number): 3
 
 Available Jobs:
-1:      RE4 POC
-Select a job (enter number): 1
+1:      Basic Example
+2:      RE4 POC
+Select a job (enter number): 2
 Injected.
 Log - Hook Entered.
-Log - DirectXVersion: Direct3D11
-Log - Got present address: 140707779987392
-Log - DirectX11 Hook Applied.
+Log - DirectXVersion: Direct3D12
+Log - IDXGIFactory4 Created: True
+Log - IDXGIAdapter1 Found: True
+Log - ID3D12Device Loaded With Adapter: True
+Log - ID3D12CommandQueue Created: True
+Log - Got Window Handle: 133840
+Log - IDXGISwapChain1 Created Using Temp Window: True
+Log - IDXGISwapChain3 Found: True
+Log - Got present address: 140736340576192
+Log - DirectX12 Hook Applied.
 Hook Complete.
 Initializing job...
-KeyPress: RETURN
-KeyPress: RETURN
-KeyPress: RETURN
-Delaying: 15000
+Delaying: autosave...
+Empty page!!
+...
+Empty page!!
+Delay Complete - Text Found.
+Delaying: 3000...
 Delay Complete.
+KeyPress: RETURN
+Delaying: 1000...
+Delay Complete.
+KeyPress: RETURN
+KeyPress: RETURN
+Delaying: continue...
+Delay Complete - Text Found.
+KeyPress: SPACE
 Initialization Complete.
 Starting actions...
-Delaying: 5000
+Delaying: 5000...
 Delay Complete.
 KeyPress: VK_Q
 MouseDown: right
 MouseClick: left
 MouseUp: right
 KeyPress: VK_R
-Delaying: 5000
+Delaying: 5000...
 Delay Complete.
 Actions Complete.
 Starting cleanup...
@@ -99,23 +137,28 @@ KeyPress: UP
 KeyPress: RETURN
 KeyPress: UP
 KeyPress: RETURN
-Delaying: 5000
+Delaying: 5000...
 Delay Complete.
 Cleanup Complete.
+Saved: Automation\2050650_638416173197208521.json
 Result:
 {
   "JobName": "RE4 POC",
   "GameId": "2050650",
-  "StartTime": "2024-01-21T15:48:38.8246086-06:00",
-  "InitializationCompleteTime": "2024-01-21T15:50:16.5896413-06:00",
-  "EndTime": "2024-01-21T15:51:11.9400199-06:00",
-  "AverageFps": 72.59055073408857,
-  "OnePercentLow": 65.66187745945314,
-  "PointOnePercentLow": 62.911318489693706,
+  "StartTime": "2024-01-23T14:33:11.8072171-06:00",
+  "InitializationCompleteTime": "2024-01-23T14:34:35.8993021-06:00",
+  "ActionsCompleteTime": "2024-01-23T14:35:02.3325388-06:00",
+  "EndTime": "2024-01-23T14:35:19.6902563-06:00",
+  "AverageFps": 68.69113279140942,
+  "OnePercentLow": 62.5374706557603,
+  "PointOnePercentLow": 59.19403376756543,
+  "Screenshots": [
+    "Automation\\Screenshots\\RE4_POC_638416172759319286.png"
+  ],
   "Success": true,
   "Error": null
 }
-Log - DirectX11 Hook Removed.
+Log - DirectX12 Hook Removed.
 Log - Hook Stopped.
 Hook Stopped.
 Complete. Press any key to exit.
@@ -131,7 +174,7 @@ Complete. Press any key to exit.
 
 ## Goals
 
-1. Multiplatform would be great. Not sure if it's possible, but an automated testing framework that runs in Windows, Mac, and Linux would be a major time and money saver and would do wonders for game quality.
+1. Multiplatform would be great. Not sure if it's possible, but an automated testing framework that runs on Windows, Mac, and Linux would be a major time and money saver and would do wonders for game quality.
 2. Performant enough to not impact results when benchmarking.
 3. Wrap it all up in a nice UI with graphs and easy test management and creation.
 4. Simple CLI for use with CI/CD.
