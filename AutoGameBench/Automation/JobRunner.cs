@@ -1,37 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using AutoGameBench.IPC;
 using InputSimulatorEx;
-using InputSimulatorEx.Native;
 using Vortice;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using NativeMethods = AutoGameBench.Native.Native;
 
 namespace AutoGameBench.Automation;
 
 public sealed class JobRunner : IDisposable
 {
-    #region Native
-
-    [DllImport("user32.dll", SetLastError = true)]
-    public static extern bool GetWindowRect(IntPtr hwnd, ref RawRect rectangle);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    internal static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
-    #endregion
-
     #region Fields
 
     private readonly IpcServer _ipcServer;
     private readonly InputSimulator _inputSimulator;
-    private readonly Dictionary<string, VirtualKeyCode> _keyMap;
     private readonly List<Job> _jobs;
 
+    private ActionRunner _actionRunner;
     private bool _jobInitialized;
     private bool _jobComplete;
     private List<double> _frameTimes;
@@ -45,10 +35,8 @@ public sealed class JobRunner : IDisposable
         _ipcServer = ipcServer;
         _ipcServer.FrameTimeReceived += IpcServer_FrameTimeReceived;
         _inputSimulator = new InputSimulator();
-        _keyMap = new Dictionary<string, VirtualKeyCode>(StringComparer.OrdinalIgnoreCase);
         _jobs = new List<Job>();
 
-        BuildKeyMap();
         BuildJobCollection();
     }
 
@@ -69,6 +57,7 @@ public sealed class JobRunner : IDisposable
     {
         JobResult result = null;
 
+        _actionRunner = new ActionRunner(_inputSimulator);
         _jobInitialized = false;
         _frameTimes = new List<double>();
 
@@ -83,18 +72,22 @@ public sealed class JobRunner : IDisposable
             Console.WriteLine("Starting actions...");
             foreach (JobAction action in job.Actions)
             {
-                RunAction(action, job.ActionDelay);
+                _actionRunner.RunAction(windowHandle, job.Name, action, job.ActionDelay);
             }
             Console.WriteLine("Actions Complete.");
 
+            DateTime actionsCompleteTime = DateTime.Now;
+
             _jobComplete = true;
 
-            CleanupJob(job);
+            CleanupJob(job, windowHandle);
+
+            DateTime endTime = DateTime.Now;
 
             double averageFps = 0;
             double onePercentLow = 0;
             double pointOnePercentLow = 0;
-            if (_frameTimes?.Any() == true)
+            if (_frameTimes.Count > 0)
             {
                 List<double> orderedFrameTimes = _frameTimes.OrderByDescending(x => x).ToList();
                 averageFps = 1000.0 / Math.Max(1.0, _frameTimes.Average());
@@ -108,10 +101,12 @@ public sealed class JobRunner : IDisposable
                 GameId = job.GameId,
                 StartTime = startTime,
                 InitializationCompleteTime = initializationCompleteTime,
-                EndTime = DateTime.Now,
+                ActionsCompleteTime = actionsCompleteTime,
+                EndTime = endTime,
                 AverageFps = averageFps,
                 OnePercentLow = onePercentLow,
                 PointOnePercentLow = pointOnePercentLow,
+                Screenshots = _actionRunner.Screenshots,
                 Success = true
             };
         }
@@ -123,6 +118,7 @@ public sealed class JobRunner : IDisposable
                 GameId = job.GameId,
                 StartTime = startTime,
                 EndTime = DateTime.Now,
+                Screenshots = _actionRunner.Screenshots,
                 Error = e.ToString()
             };
         }
@@ -147,14 +143,6 @@ public sealed class JobRunner : IDisposable
         if (_jobInitialized && !_jobComplete)
         {
             _frameTimes.Add(e.FrameTime);
-        }
-    }
-
-    private void BuildKeyMap()
-    {
-        foreach (VirtualKeyCode keyCode in Enum.GetValues<VirtualKeyCode>())
-        {
-            _keyMap.TryAdd(keyCode.ToString().Replace("VK_", String.Empty), keyCode);
         }
     }
 
@@ -195,11 +183,12 @@ public sealed class JobRunner : IDisposable
                 Thread.Sleep(job.Initialization.StartDelay);
             }
 
+            BringWindowToForeground(windowHandle);
             CenterMouse(windowHandle);
 
             foreach (JobAction action in job.Initialization.Actions)
             {
-                RunAction(action, job.ActionDelay);
+                _actionRunner.RunAction(windowHandle, job.Name, action, job.ActionDelay);
             }
 
             Console.WriteLine("Initialization Complete.");
@@ -208,26 +197,41 @@ public sealed class JobRunner : IDisposable
         _jobInitialized = true;
     }
 
+    private void BringWindowToForeground(nint windowHandle)
+    {
+        if (!NativeMethods.IsWindowForeground(windowHandle))
+        {
+            Thread.Sleep(250);
+
+            if (NativeMethods.IsIconic(windowHandle))
+            {
+                // Minimized so send restore
+                NativeMethods.ShowWindow(windowHandle, NativeMethods.WindowShowStyle.Restore);
+            }
+            else
+            {
+                // Already Maximized or Restored so just bring to front
+                NativeMethods.SetForegroundWindow(windowHandle);
+            }
+        }
+    }
+
     private void CenterMouse(nint windowHandle)
     {
-        RawRect windowRect = new RawRect();
-        GetWindowRect(windowHandle, ref windowRect);
+        Rectangle windowRect = NativeMethods.GetWindowRect(windowHandle);
 
-        double windowWidth = windowRect.Right - windowRect.Left;
-        double windowHeight = windowRect.Bottom - windowRect.Top;
-
-        MoveWindow(windowHandle, 0, 0, (int)windowWidth, (int)windowHeight, true);
+        NativeMethods.MoveWindow(windowHandle, 0, 0, windowRect.Width, windowRect.Height, true);
 
         windowRect = new RawRect();
-        GetWindowRect(windowHandle, ref windowRect);
+        NativeMethods.GetWindowRect(windowHandle, ref windowRect);
 
-        double centerX = windowRect.Left + (windowWidth / 2);
-        double centerY = windowRect.Top + (windowHeight / 2);
+        double centerX = windowRect.Left + (windowRect.Width / 2);
+        double centerY = windowRect.Top + (windowRect.Height / 2);
         _inputSimulator.Mouse.MoveMouseTo(0, 0);
         _inputSimulator.Mouse.MoveMouseBy((int)centerX / 2, (int)centerY / 2);
     }
 
-    private void CleanupJob(Job job)
+    private void CleanupJob(Job job, nint windowHandle)
     {
         if (job.Cleanup != null)
         {
@@ -235,129 +239,11 @@ public sealed class JobRunner : IDisposable
 
             foreach (JobAction action in job.Cleanup.Actions)
             {
-                RunAction(action, job.ActionDelay);
+                _actionRunner.RunAction(windowHandle, job.Name, action, job.ActionDelay);
             }
 
             Console.WriteLine("Cleanup Complete.");
         }
-    }
-
-    private void RunAction(JobAction action, int postDelay)
-    {
-        if (action.Name == "KeyPress")
-        {
-            if (action.With.ContainsKey("key"))
-            {
-                VirtualKeyCode? keyCode = GetKey(action.With["key"]);
-
-                if (keyCode.HasValue)
-                {
-                    _inputSimulator.Keyboard.KeyDown(keyCode.Value).Sleep(100).KeyUp(keyCode.Value);
-                    Console.WriteLine($"KeyPress: {keyCode.Value}");
-                }
-            }
-        }
-        else if (action.Name == "KeyDown")
-        {
-            if (action.With.ContainsKey("key"))
-            {
-                VirtualKeyCode? keyCode = GetKey(action.With["key"]);
-
-                if (keyCode.HasValue)
-                {
-                    _inputSimulator.Keyboard.KeyDown(keyCode.Value);
-                    Console.WriteLine($"KeyDown: {keyCode.Value}");
-                }
-            }
-        }
-        else if (action.Name == "KeyUp")
-        {
-            if (action.With.ContainsKey("key"))
-            {
-                VirtualKeyCode? keyCode = GetKey(action.With["key"]);
-
-                if (keyCode.HasValue)
-                {
-                    _inputSimulator.Keyboard.KeyUp(keyCode.Value);
-                    Console.WriteLine($"KeyUp: {keyCode.Value}");
-                }
-            }
-        }
-        else if (action.Name == "MouseClick")
-        {
-            if (action.With.ContainsKey("button"))
-            {
-                if (String.Equals(action.With["button"], "right", StringComparison.OrdinalIgnoreCase))
-                {
-                    _inputSimulator.Mouse.RightButtonDown().Sleep(50).RightButtonUp();
-                    Console.WriteLine($"MouseClick: right");
-                }
-                else if (String.Equals(action.With["button"], "left", StringComparison.OrdinalIgnoreCase))
-                {
-                    _inputSimulator.Mouse.LeftButtonDown().Sleep(50).LeftButtonUp();
-                    Console.WriteLine($"MouseClick: left");
-                }
-            }
-        }
-        else if (action.Name == "MouseDown")
-        {
-            if (action.With.ContainsKey("button"))
-            {
-                if (String.Equals(action.With["button"], "right", StringComparison.OrdinalIgnoreCase))
-                {
-                    _inputSimulator.Mouse.RightButtonDown();
-                    Console.WriteLine($"MouseDown: right");
-                }
-                else if (String.Equals(action.With["button"], "left", StringComparison.OrdinalIgnoreCase))
-                {
-                    _inputSimulator.Mouse.LeftButtonDown();
-                    Console.WriteLine($"MouseDown: left");
-                }
-            }
-        }
-        else if (action.Name == "MouseUp")
-        {
-            if (action.With.ContainsKey("button"))
-            {
-                if (String.Equals(action.With["button"], "right", StringComparison.OrdinalIgnoreCase))
-                {
-                    _inputSimulator.Mouse.RightButtonUp();
-                    Console.WriteLine($"MouseUp: right");
-                }
-                else if (String.Equals(action.With["button"], "left", StringComparison.OrdinalIgnoreCase))
-                {
-                    _inputSimulator.Mouse.LeftButtonUp();
-                    Console.WriteLine($"MouseUp: left");
-                }
-            }
-        }
-        else if (action.Name == "Delay")
-        {
-            if (action.With.ContainsKey("time") &&
-                Int32.TryParse(action.With["time"], out int delay))
-            {
-                Console.WriteLine($"Delaying: {delay}");
-                Thread.Sleep(delay);
-                Console.WriteLine("Delay Complete.");
-            }
-        }
-
-        if (!action.SkipDelay)
-        {
-            Thread.Sleep(postDelay);
-        }
-    }
-
-    private VirtualKeyCode? GetKey(string key)
-    {
-        VirtualKeyCode? keyCode = null;
-
-        if (_keyMap.ContainsKey(key))
-        {
-            keyCode = _keyMap[key];
-        }
-
-        return keyCode;
     }
 
     #endregion

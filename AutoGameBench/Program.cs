@@ -46,6 +46,11 @@ internal class Program
                     Console.Write("Enter EXE path: ");
                     gameExePath = Console.ReadLine();
 
+                    if (!String.IsNullOrWhiteSpace(gameExePath))
+                    {
+                        gameExePath = gameExePath.Replace("\"", String.Empty);
+                    }
+
                     if (File.Exists(gameExePath))
                     {
                         break;
@@ -142,6 +147,9 @@ internal class Program
         // Alternate way to launch: $"steam://rungameid/{game.AppState.AppId}"
         Process steamProcess = Process.Start(_gameLibrary.SteamExePath, $"steam://launch/{game.AppState.AppId}");
         steamProcess.WaitForExit();
+
+        // Wait for the game process to start
+        Thread.Sleep(1000);
 
         int retryCount = 0;
         while (gameProcess == null && retryCount < 10)

@@ -42,6 +42,8 @@ internal class GameLibrary
                 catch { }
             }
         }
+
+        _apps.Sort((x, y) => x.AppState.Name.CompareTo(y.AppState.Name));
     }
 
     #endregion

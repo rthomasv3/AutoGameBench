@@ -2,9 +2,10 @@
 actionDelay: 0 # Default is 3000 ms
 
 initialization:
-  startDelay: 30000
+  startDelay: 10000
 
 actions:
+  - name: Screenshot
   - name: KeyDown
     with: 
       key: a
