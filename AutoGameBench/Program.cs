@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using AutoGameBench.Automation;
 using AutoGameBench.IPC;
@@ -103,19 +102,8 @@ internal class Program
 
             if (TryAttachToProcess(gameProcess, out Injector injector))
             {
-                JobResult result = jobRunner.RunJob(selectedJob, gameProcess.MainWindowHandle);
+                _ = jobRunner.RunJob(selectedJob, gameProcess.MainWindowHandle);
                 
-                Console.WriteLine("Result:");
-
-                string resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions()
-                {
-                    WriteIndented = true
-                });
-
-                File.WriteAllText($"Automation\\{selectedJob.GameId}_{DateTime.Now.Ticks}.json", resultJson);
-
-                Console.WriteLine(resultJson);
-
                 if (TryDetachFromProcess(injector))
                 {
                     gameProcess.Kill();

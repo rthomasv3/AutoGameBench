@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Reloaded.Injector" Version="1.2.5" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.1" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
     <PackageReference Include="VdfConverter" Version="1.0.3" />
     <PackageReference Include="YamlDotNet" Version="13.7.1" />
   </ItemGroup>
@@ -30,6 +31,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Automation\Jobs\RE4POC.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Tesseract\eng.traineddata">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

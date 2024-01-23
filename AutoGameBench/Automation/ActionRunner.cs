@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using InputSimulatorEx;
 using InputSimulatorEx.Native;
+using Tesseract;
 
 namespace AutoGameBench.Automation;
 
-public sealed class ActionRunner
+public sealed class ActionRunner : IDisposable
 {
     #region Fields
 
@@ -14,6 +16,7 @@ public sealed class ActionRunner
     private readonly ScreenshotManager _screenshotManager;
     private readonly Dictionary<string, VirtualKeyCode> _keyMap;
     private readonly List<string> _screenshots;
+    private readonly TesseractEngine _tesseractEngine;
 
     #endregion
 
@@ -25,6 +28,7 @@ public sealed class ActionRunner
         _screenshotManager = new ScreenshotManager();
         _keyMap = new Dictionary<string, VirtualKeyCode>(StringComparer.OrdinalIgnoreCase);
         _screenshots = new List<string>();
+        _tesseractEngine = new(@"./Tesseract", "eng", EngineMode.Default);
 
         BuildKeyMap();
     }
@@ -41,6 +45,11 @@ public sealed class ActionRunner
     #endregion
 
     #region Public Methods
+
+    public void Dispose()
+    {
+        _tesseractEngine?.Dispose();
+    }
 
     public void RunAction(nint windowHandle, string jobName, JobAction action, int postDelay)
     {
@@ -70,7 +79,7 @@ public sealed class ActionRunner
         }
         else if (action.Name == "Delay")
         {
-            Delay(action);
+            Delay(windowHandle, action);
         }
         else if (action.Name == "Screenshot")
         {
@@ -205,7 +214,7 @@ public sealed class ActionRunner
         }
     }
 
-    private void Delay(JobAction action)
+    private void Delay(nint windowHandle, JobAction action)
     {
         if (action.With.ContainsKey("time") &&
             Int32.TryParse(action.With["time"], out int delay))
@@ -213,6 +222,39 @@ public sealed class ActionRunner
             Console.WriteLine($"Delaying: {delay}...");
             Thread.Sleep(delay);
             Console.WriteLine("Delay Complete.");
+        }
+        else if (action.With.ContainsKey("text"))
+        {
+            string text = action.With["text"];
+            Console.WriteLine($"Delaying: {text}...");
+
+            bool foundText = false;
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            while (!foundText && stopwatch.ElapsedMilliseconds < 60000)
+            {
+                Thread.Sleep(1000);
+
+                byte[] imageData = _screenshotManager.TakeScreenshot(windowHandle);
+
+                using Pix image = Pix.LoadFromMemory(imageData);
+                using Page page = _tesseractEngine.Process(image);
+                string pageText = page.GetText();
+
+                if (!String.IsNullOrWhiteSpace(pageText))
+                {
+                    foundText = pageText.Contains(text, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            if (foundText)
+            {
+                Console.WriteLine("Delay Complete - Text Found.");
+            }
+            else
+            {
+                Console.WriteLine("Delay Timeout.");
+            }
         }
     }
 

@@ -3,11 +3,20 @@ gameId: 2050650
 actionDelay: 2000 # Default is 3000 ms
 
 initialization:
-  startDelay: 70000
+  startDelay: 5000
   actions:
+    - name: Delay
+      with:
+        text: autosave
+    - name: Delay
+      with:
+        time: 3000
     - name: KeyPress
       with: 
         key: return
+    - name: Delay
+      with:
+        time: 1000
     - name: KeyPress
       with: 
         key: return
@@ -15,10 +24,14 @@ initialization:
       with: 
         key: return
     - name: Delay
+      with:
+        text: continue
+    - name: KeyPress
       with: 
-        time: 15000
+        key: space
 
 actions:
+- name: Screenshot
 - name: Delay
   with: 
     time: 5000

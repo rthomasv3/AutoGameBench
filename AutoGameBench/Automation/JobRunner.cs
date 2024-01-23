@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using AutoGameBench.IPC;
 using InputSimulatorEx;
@@ -122,6 +123,12 @@ public sealed class JobRunner : IDisposable
                 Error = e.ToString()
             };
         }
+        finally
+        {
+            _actionRunner.Dispose();
+        }
+
+        SaveJobResult(job, result);
 
         return result;
     }
@@ -244,6 +251,20 @@ public sealed class JobRunner : IDisposable
 
             Console.WriteLine("Cleanup Complete.");
         }
+    }
+
+    private void SaveJobResult(Job job, JobResult result)
+    {
+        string resultJson = JsonSerializer.Serialize(result, new JsonSerializerOptions()
+        {
+            WriteIndented = true
+        });
+
+        string fileName = $"Automation\\{job.GameId}_{DateTime.Now.Ticks}.json";
+        File.WriteAllText(fileName, resultJson);
+
+        Console.WriteLine($"Saved: {fileName}");
+        Console.WriteLine($"Result:\n{resultJson}");
     }
 
     #endregion
