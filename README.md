@@ -44,8 +44,8 @@ A job is broken down into the following steps:
 4. Load additional assemblies via a plugin pattern (including all dependencies).
 5. Intercept DirectX 11 and 12 Present call to get performance info.
 6. Run basic actions in a game by simulating mouse and keyboard inputs.
-8. Check for and recognize any text that appears in game (English only right now).
-9. Take screenshots.
+7. Check for and recognize any text that appears in game (English only right now).
+8. Take screenshots.
 
 
 ### Example
