@@ -47,10 +47,13 @@ public sealed class ScreenshotManager
     {
         string path = null;
 
-        using Bitmap bitmap = GetScreenImage(windowRect);
-        string safeJobName = String.Join("_", jobName.Split(_invalidFileCharacters));
-        path = Path.Combine(_screenshotDirectory, $"{safeJobName}_{DateTime.Now.Ticks}.png");
-        bitmap.Save(path, ImageFormat.Png);
+        if (windowRect.Width > 0 && windowRect.Height > 0)
+        {
+            using Bitmap bitmap = GetScreenImage(windowRect);
+            string safeJobName = String.Join("_", jobName.Split(_invalidFileCharacters));
+            path = Path.Combine(_screenshotDirectory, $"{safeJobName}_{DateTime.Now.Ticks}.png");
+            bitmap.Save(path, ImageFormat.Png);
+        }
 
         return path;
     }
@@ -60,10 +63,14 @@ public sealed class ScreenshotManager
         byte[] imageBytes = null;
 
         Rectangle windowRect = NativeMethods.GetWindowRect(windowHandle);
-        using Bitmap bitmap = GetScreenImage(windowRect);
-        using MemoryStream ms = new MemoryStream();
-        bitmap.Save(ms, ImageFormat.Png);
-        imageBytes = ms.ToArray();
+
+        if (windowRect.Width > 0 && windowRect.Height > 0)
+        {
+            using Bitmap bitmap = GetScreenImage(windowRect);
+            using MemoryStream ms = new MemoryStream();
+            bitmap.Save(ms, ImageFormat.Png);
+            imageBytes = ms.ToArray();
+        }
 
         return imageBytes;
     }

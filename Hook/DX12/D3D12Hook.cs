@@ -97,7 +97,10 @@ public sealed class D3D12Hook : IGraphicsHook
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate int DXGISwapChain_PresentDelegate(nint swapChainPtr, int syncInterval, PresentFlags flags);
 
-    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate long DXGISwapChain_Present1Delegate(uint syncInterval, PresentFlags flags, [In] ref PresentParameters presentParameters);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate int DXGISwapChain_ResizeBuffersDelegate(uint bufferCount, uint width, uint height, Format newFormat, SwapChainFlags swapChainFlags);
 
     #endregion
@@ -110,7 +113,7 @@ public sealed class D3D12Hook : IGraphicsHook
     private nint _resizeBuffersAddress;
     private Hook<DXGISwapChain_PresentDelegate> _presentHook;
     private Hook<DXGISwapChain_ResizeBuffersDelegate> _resizeBuffersHook;
-    private DateTime _lastUpdateTime = DateTime.UtcNow;
+    private DateTime _lastPresentTime = DateTime.UtcNow;
     private IpcClient _ipcClient;
     private ID3D12Device _device;
     private IDXGISwapChain3 _swapChain;
@@ -161,7 +164,7 @@ public sealed class D3D12Hook : IGraphicsHook
             _presentHook.Dispose();
             _presentHook = null;
 
-            _ipcClient.Log("DirectX12 Hook Removed.");
+            _ipcClient.Log("DirectX12 Present Hook Removed.");
         }
 
         if (_resizeBuffersHook != null)
@@ -252,7 +255,7 @@ public sealed class D3D12Hook : IGraphicsHook
                 Scaling = Scaling.Stretch,
                 AlphaMode = AlphaMode.Unspecified,
                 Flags = SwapChainFlags.FrameLatencyWaitableObject,
-                SwapEffect = SwapEffect.FlipDiscard,
+                SwapEffect = SwapEffect.FlipSequential,
             };
 
             tempSwapChain1 = dxgiFactory.CreateSwapChainForHwnd(_commandQueue, _tempWindowHandle, descrip, null, null);
@@ -270,6 +273,7 @@ public sealed class D3D12Hook : IGraphicsHook
 
         if (tempSwapChain1 == null)
         {
+            // IDXGISwapChain1 has Present1
             tempSwapChain1 = dxgiFactory.CreateSwapChainForComposition(_commandQueue, chainDescription);
             _ipcClient.Log($"IDXGISwapChain1 Created: {tempSwapChain1 != null}");
 
@@ -306,15 +310,14 @@ public sealed class D3D12Hook : IGraphicsHook
         try
         {
             dxgiFactory.Dispose();
-            tempSwapChain1.Dispose();
         }
         catch { }
     }
 
     private int PresentHook(nint swapChainPtr, int syncInterval, PresentFlags flags)
     {
-        double frameTime = (DateTime.UtcNow - _lastUpdateTime).TotalMilliseconds;
-        _lastUpdateTime = DateTime.UtcNow;
+        double frameTime = (DateTime.UtcNow - _lastPresentTime).TotalMilliseconds;
+        _lastPresentTime = DateTime.UtcNow;
 
         _ipcClient.SendFrameTime(frameTime);
 

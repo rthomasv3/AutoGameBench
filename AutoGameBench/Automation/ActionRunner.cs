@@ -237,13 +237,16 @@ public sealed class ActionRunner : IDisposable
 
                 byte[] imageData = _screenshotManager.TakeScreenshot(windowHandle);
 
-                using Pix image = Pix.LoadFromMemory(imageData);
-                using Page page = _tesseractEngine.Process(image);
-                string pageText = page.GetText();
-
-                if (!String.IsNullOrWhiteSpace(pageText))
+                if (imageData != null)
                 {
-                    foundText = pageText.Contains(text, StringComparison.OrdinalIgnoreCase);
+                    using Pix image = Pix.LoadFromMemory(imageData);
+                    using Page page = _tesseractEngine.Process(image);
+                    string pageText = page.GetText();
+
+                    if (!String.IsNullOrWhiteSpace(pageText))
+                    {
+                        foundText = pageText.Contains(text, StringComparison.OrdinalIgnoreCase);
+                    }
                 }
             }
 

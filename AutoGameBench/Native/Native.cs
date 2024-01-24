@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace AutoGameBench.Native;
 
@@ -54,7 +55,7 @@ public class Native
         Rectangle rectangle = default;
         int attempts = 0;
 
-        while (attempts++ < 3)
+        while (attempts++ < 5)
         {
             rectangle = new Rectangle();
             GetWindowRect(hwnd, ref rectangle);
@@ -63,6 +64,8 @@ public class Native
             {
                 break;
             }
+
+            Thread.Sleep(100);
         }
 
         return rectangle;
