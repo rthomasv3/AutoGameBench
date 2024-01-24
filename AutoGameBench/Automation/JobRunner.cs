@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using AutoGameBench.IPC;
+using AutoGameBench.Sensors;
 using InputSimulatorEx;
 using Vortice;
 using YamlDotNet.Serialization;
@@ -21,6 +22,7 @@ public sealed class JobRunner : IDisposable
     private readonly IpcServer _ipcServer;
     private readonly InputSimulator _inputSimulator;
     private readonly List<Job> _jobs;
+    private readonly SensorMonitor _sensorMonitor;
 
     private ActionRunner _actionRunner;
     private bool _jobInitialized;
@@ -37,6 +39,7 @@ public sealed class JobRunner : IDisposable
         _ipcServer.FrameTimeReceived += IpcServer_FrameTimeReceived;
         _inputSimulator = new InputSimulator();
         _jobs = new List<Job>();
+        _sensorMonitor = new SensorMonitor();
 
         BuildJobCollection();
     }
@@ -68,6 +71,10 @@ public sealed class JobRunner : IDisposable
         {
             InitializeJob(job, windowHandle);
 
+            _sensorMonitor.StartMonitoring();
+
+            _jobInitialized = true;
+
             DateTime initializationCompleteTime = DateTime.Now;
 
             Console.WriteLine("Starting actions...");
@@ -78,6 +85,7 @@ public sealed class JobRunner : IDisposable
             Console.WriteLine("Actions Complete.");
 
             DateTime actionsCompleteTime = DateTime.Now;
+            _sensorMonitor.StopMonitoring();
 
             _jobComplete = true;
 
@@ -86,14 +94,14 @@ public sealed class JobRunner : IDisposable
             DateTime endTime = DateTime.Now;
 
             double averageFps = 0;
-            double onePercentLow = 0;
-            double pointOnePercentLow = 0;
+            double onePercentLowFps = 0;
+            double pointOnePercentLowFps = 0;
             if (_frameTimes.Count > 0)
             {
                 List<double> orderedFrameTimes = _frameTimes.OrderByDescending(x => x).ToList();
                 averageFps = 1000.0 / Math.Max(1.0, _frameTimes.Average());
-                onePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.1)).Average());
-                pointOnePercentLow = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.01)).Average());
+                onePercentLowFps = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.1)).Average());
+                pointOnePercentLowFps = 1000.0 / Math.Max(1.0, orderedFrameTimes.Take((int)(_frameTimes.Count * 0.01)).Average());
             }
 
             result = new JobResult()
@@ -105,8 +113,14 @@ public sealed class JobRunner : IDisposable
                 ActionsCompleteTime = actionsCompleteTime,
                 EndTime = endTime,
                 AverageFps = averageFps,
-                OnePercentLow = onePercentLow,
-                PointOnePercentLow = pointOnePercentLow,
+                OnePercentLowFps = onePercentLowFps,
+                PointOnePercentLowFps = pointOnePercentLowFps,
+                AverageCpuTemperature = _sensorMonitor.AverageCpuTemperature,
+                AverageCpuLoad = _sensorMonitor.AverageCpuLoad,
+                AverageMemoryUsage = _sensorMonitor.AverageMemoryUsage,
+                AverageGpuTemperature = _sensorMonitor.AverageGpuTemperature,
+                AverageGpuHotSpotTemperature = _sensorMonitor.AverageGpuHotSpotTemperature,
+                AverageGpuMemoryUsage = _sensorMonitor.AverageGpuMemoryUsage,
                 Screenshots = _actionRunner.Screenshots,
                 Success = true
             };
@@ -138,6 +152,11 @@ public sealed class JobRunner : IDisposable
         if (_ipcServer != null)
         {
             _ipcServer.FrameTimeReceived -= IpcServer_FrameTimeReceived;
+        }
+
+        if (_sensorMonitor != null)
+        {
+            _sensorMonitor.Dispose();
         }
     }
 
@@ -200,8 +219,6 @@ public sealed class JobRunner : IDisposable
 
             Console.WriteLine("Initialization Complete.");
         }
-
-        _jobInitialized = true;
     }
 
     private void BringWindowToForeground(nint windowHandle)

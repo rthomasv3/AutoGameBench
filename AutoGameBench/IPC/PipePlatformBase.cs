@@ -10,7 +10,7 @@ public class PipePlatformBase : IPipePlatform
         return new NamedPipeServerStream(
             pipeName,
             PipeDirection.InOut,
-            1,
+            2,
             PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous,
             65536,

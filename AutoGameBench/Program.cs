@@ -85,6 +85,8 @@ internal class Program
             }
         }
 
+        Process sensorMonitor = StartSensorMonitor();
+
         Process gameProcess = null;
 
         if (selectedApp != null)
@@ -111,11 +113,31 @@ internal class Program
             }
         }
 
+        StopSensorMonitor(sensorMonitor);
+
         jobRunner.Dispose();
         _ipcServer.Dispose();
 
         Console.WriteLine("Complete. Press any key to exit.");
         Console.Read();
+    }
+
+    static Process StartSensorMonitor()
+    {
+        ProcessStartInfo startInfo = new ProcessStartInfo()
+        {
+            CreateNoWindow = true,
+            FileName = "SensorMonitor.exe",
+            UseShellExecute = true,
+            Verb = "runas",
+            WindowStyle = ProcessWindowStyle.Hidden,
+        };
+        return Process.Start(startInfo);
+    }
+
+    static void StopSensorMonitor(Process sensorMonitor)
+    {
+        sensorMonitor.Kill();
     }
 
     static Process StartGame(string gameExePath)
@@ -134,6 +156,7 @@ internal class Program
 
         // Alternate way to launch: $"steam://rungameid/{game.AppState.AppId}"
         Process steamProcess = Process.Start(_gameLibrary.SteamExePath, $"steam://launch/{game.AppState.AppId}");
+
         steamProcess.WaitForExit();
 
         int retryCount = 0;
@@ -148,6 +171,8 @@ internal class Program
                 retryCount++;
             }
         }
+
+        Console.WriteLine($"Selected Process: {gameProcess?.ProcessName}");
 
         return gameProcess;
     }

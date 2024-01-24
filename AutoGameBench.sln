@@ -4,10 +4,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoGameBench", "AutoGameBench\AutoGameBench.csproj", "{5980B70B-CC64-4B17-8CAC-C00AAE357CAE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD} = {5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hook", "Hook\Hook.csproj", "{AA08205A-333C-445A-A5BC-2A1A668B7CCC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AssemblyLoader", "AssemblyLoader\AssemblyLoader.csproj", "{2050D868-BEBB-4405-BDDC-85ECC4311264}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SensorMonitor", "SensorMonitor\SensorMonitor.csproj", "{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +46,14 @@ Global
 		{2050D868-BEBB-4405-BDDC-85ECC4311264}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2050D868-BEBB-4405-BDDC-85ECC4311264}.Release|x64.ActiveCfg = Release|Any CPU
 		{2050D868-BEBB-4405-BDDC-85ECC4311264}.Release|x64.Build.0 = Release|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Debug|x64.Build.0 = Debug|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Release|x64.ActiveCfg = Release|Any CPU
+		{5A09F6E4-8EBB-47F4-AE46-C2CB44778BDD}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

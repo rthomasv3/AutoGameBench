@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;$(OutDir)\&quot; &quot;$(SolutionDir)\.tmp\&quot; /Y /I &amp;&amp; attrib +h &quot;$(SolutionDir)\.tmp&quot; /s /d" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="CoreHook.IPC" Version="1.0.1" />
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.3" />
+  </ItemGroup>
+
+</Project>

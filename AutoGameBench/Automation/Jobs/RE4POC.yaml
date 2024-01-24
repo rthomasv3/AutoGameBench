@@ -24,6 +24,7 @@ initialization:
       with: 
         key: return
     - name: Delay
+      skipDelay: true
       with:
         text: continue
     - name: KeyPress

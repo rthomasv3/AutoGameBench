@@ -43,9 +43,10 @@ A job is broken down into the following steps:
 3. Inject a native assembly into the game.
 4. Load additional assemblies via a plugin pattern (including all dependencies).
 5. Intercept DirectX 11 and 12 Present call to get performance info.
-6. Run basic actions in a game by simulating mouse and keyboard inputs.
-7. Check for and recognize any text that appears in game (English only right now).
-8. Take screenshots.
+6. Collect sensor data during run (CPU temp, GPU temp, memory usage, and more).
+7. Run basic actions in a game by simulating mouse and keyboard inputs.
+8. Check for and recognize any text that appears in game (English only right now).
+9. Take screenshots.
 
 
 ### Example
@@ -58,15 +59,21 @@ A very simple example job for Resident Evil 4 Remake is included. The script wil
 {
   "JobName": "RE4 POC",
   "GameId": "2050650",
-  "StartTime": "2024-01-23T14:33:11.8072171-06:00",
-  "InitializationCompleteTime": "2024-01-23T14:34:35.8993021-06:00",
-  "ActionsCompleteTime": "2024-01-23T14:35:02.3325388-06:00",
-  "EndTime": "2024-01-23T14:35:19.6902563-06:00",
-  "AverageFps": 68.69113279140942,
-  "OnePercentLow": 62.5374706557603,
-  "PointOnePercentLow": 59.19403376756543,
+  "StartTime": "2024-01-24T17:35:56.8645656-06:00",
+  "InitializationCompleteTime": "2024-01-24T17:37:17.0808078-06:00",
+  "ActionsCompleteTime": "2024-01-24T17:37:43.750674-06:00",
+  "EndTime": "2024-01-24T17:38:01.1957647-06:00",
+  "AverageFps": 69.2023572482173,
+  "OnePercentLowFps": 62.940360177579386,
+  "PointOnePercentLowFps": 60.346711975872026,
+  "AverageCpuTemperature": 58.05299377441406,
+  "AverageCpuLoad": 24.3011531829834,
+  "AverageMemoryUsage": 17.337448120117188,
+  "AverageGpuTemperature": 69.02173614501953,
+  "AverageGpuHotSpotTemperature": 81.18274688720703,
+  "AverageGpuMemoryUsage": 5493.86962890625,
   "Screenshots": [
-    "Automation\\Screenshots\\RE4_POC_638416172759319286.png"
+    "Automation\\Screenshots\\RE4_POC_638417146371385281.png"
   ],
   "Success": true,
   "Error": null
@@ -145,15 +152,21 @@ Result:
 {
   "JobName": "RE4 POC",
   "GameId": "2050650",
-  "StartTime": "2024-01-23T14:33:11.8072171-06:00",
-  "InitializationCompleteTime": "2024-01-23T14:34:35.8993021-06:00",
-  "ActionsCompleteTime": "2024-01-23T14:35:02.3325388-06:00",
-  "EndTime": "2024-01-23T14:35:19.6902563-06:00",
-  "AverageFps": 68.69113279140942,
-  "OnePercentLow": 62.5374706557603,
-  "PointOnePercentLow": 59.19403376756543,
+  "StartTime": "2024-01-24T17:35:56.8645656-06:00",
+  "InitializationCompleteTime": "2024-01-24T17:37:17.0808078-06:00",
+  "ActionsCompleteTime": "2024-01-24T17:37:43.750674-06:00",
+  "EndTime": "2024-01-24T17:38:01.1957647-06:00",
+  "AverageFps": 69.2023572482173,
+  "OnePercentLowFps": 62.940360177579386,
+  "PointOnePercentLowFps": 60.346711975872026,
+  "AverageCpuTemperature": 58.05299377441406,
+  "AverageCpuLoad": 24.3011531829834,
+  "AverageMemoryUsage": 17.337448120117188,
+  "AverageGpuTemperature": 69.02173614501953,
+  "AverageGpuHotSpotTemperature": 81.18274688720703,
+  "AverageGpuMemoryUsage": 5493.86962890625,
   "Screenshots": [
-    "Automation\\Screenshots\\RE4_POC_638416172759319286.png"
+    "Automation\\Screenshots\\RE4_POC_638417146371385281.png"
   ],
   "Success": true,
   "Error": null
