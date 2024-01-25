@@ -152,9 +152,11 @@ internal class Program
         List<string> possibleGameExecutables = Directory
             .GetFiles(game.AppState.FullInstallDir, "*.exe", SearchOption.AllDirectories)
             .Select(x => Path.GetFileNameWithoutExtension(x))
+            .Where(x => !x.Contains("Launcher", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        // Alternate way to launch: $"steam://rungameid/{game.AppState.AppId}"
+        // Alternate way to launch
+        // Process steamProcess = Process.Start(_gameLibrary.SteamExePath, $"steam://rungameid/{game.AppState.AppId}");
         Process steamProcess = Process.Start(_gameLibrary.SteamExePath, $"steam://launch/{game.AppState.AppId}");
 
         steamProcess.WaitForExit();
@@ -164,7 +166,10 @@ internal class Program
         {
             Thread.Sleep(1250);
 
-            gameProcess = Process.GetProcesses().Where(x => possibleGameExecutables.Contains(x.ProcessName)).FirstOrDefault();
+            gameProcess = Process.GetProcesses()
+                .Where(x => possibleGameExecutables.Contains(x.ProcessName))
+                .OrderByDescending(x => x.NonpagedSystemMemorySize64)
+                .FirstOrDefault();
 
             if (gameProcess == null)
             {
