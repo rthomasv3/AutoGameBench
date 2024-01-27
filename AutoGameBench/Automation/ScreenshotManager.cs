@@ -79,12 +79,12 @@ public sealed class ScreenshotManager
 
     #region Private Methods
 
-    private Bitmap GetScreenImage(Rectangle windowRect)
+    private Bitmap GetScreenImage(Rectangle windowRect, bool removeWindowBorder = false)
     {
         Bitmap bitmap = null;
 
         int width = windowRect.Width;
-        int height = windowRect.Height - _headerHeight - _shadowHeight;
+        int height = removeWindowBorder ? windowRect.Height - _headerHeight - _shadowHeight : windowRect.Height;
 
         if (width > 0 && height > 0)
         {
@@ -92,7 +92,7 @@ public sealed class ScreenshotManager
 
             using (Graphics g = Graphics.FromImage(bitmap))
             {
-                g.CopyFromScreen(windowRect.Left, windowRect.Top + _headerHeight, 0, 0, bitmap.Size, CopyPixelOperation.SourceCopy);
+                g.CopyFromScreen(windowRect.Left, windowRect.Top + (removeWindowBorder ? _headerHeight : 0), 0, 0, bitmap.Size, CopyPixelOperation.SourceCopy);
             }
         }
 

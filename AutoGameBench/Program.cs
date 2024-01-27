@@ -104,6 +104,8 @@ internal class Program
 
             if (TryAttachToProcess(gameProcess, out Injector injector))
             {
+                Thread.Sleep(500);
+
                 _ = jobRunner.RunJob(selectedJob, gameProcess.MainWindowHandle);
                 
                 if (TryDetachFromProcess(injector))

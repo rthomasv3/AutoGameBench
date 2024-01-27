@@ -76,7 +76,7 @@ public sealed class SensorMonitor : IDisposable
 
     public void StartMonitoring()
     {
-        if (!_isMonitoring)
+        if (!_isMonitoring && _pipeServer?.Connection?.IsConnected == true)
         {
             _cpuTemperatures = new List<float>();
             _cpuLoads = new List<float>();
@@ -92,8 +92,11 @@ public sealed class SensorMonitor : IDisposable
 
     public void StopMonitoring()
     {
-        _pipeServer.MessageHandler.TryWrite(new Message("Command", "Stop"));
-        _isMonitoring = false;
+        if (_isMonitoring && _pipeServer?.Connection?.IsConnected == true)
+        {
+            _pipeServer.MessageHandler.TryWrite(new Message("Command", "Stop"));
+            _isMonitoring = false;
+        }
     }
 
     #endregion
