@@ -1,0 +1,33 @@
+﻿name: Mouse Example
+actionDelay: 5000 # Default is 3000 ms
+
+initialization:
+  startDelay: 10000
+
+actions:
+  - name: MoveMouseTo
+    with:
+      text: press
+  - name: MouseClick
+    with:
+      button: left
+  - name: MoveMouseTo
+    with:
+      x: 50
+      y: 50
+      absolute: false
+  - name: MoveMouseTo
+    with:
+      x: 10
+      y: 10
+      absolute: true
+  - name: MoveMouseBy
+    with:
+      x: 100
+      y: 100
+
+cleanup:
+  actions:
+    - name: Delay
+      with: 
+        time: 1000

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Threading;
 using InputSimulatorEx;
 using InputSimulatorEx.Native;
 using Tesseract;
+using NativeMethods = AutoGameBench.Native.Native;
 
 namespace AutoGameBench.Automation;
 
@@ -64,6 +66,14 @@ public sealed class ActionRunner : IDisposable
         else if (action.Name == "KeyUp")
         {
             KeyUp(action);
+        }
+        else if (action.Name == "MoveMouseTo")
+        {
+            MoveMouseTo(windowHandle, action);
+        }
+        else if (action.Name == "MoveMouseBy")
+        {
+            MoveMouseBy(action);
         }
         else if (action.Name == "MouseClick")
         {
@@ -160,6 +170,102 @@ public sealed class ActionRunner : IDisposable
                 _inputSimulator.Keyboard.KeyUp(keyCode.Value);
                 Console.WriteLine($"KeyUp: {keyCode.Value}");
             }
+        }
+    }
+
+    private void MoveMouseTo(nint windowHandle, JobAction action)
+    {
+        if (action.With.ContainsKey("text"))
+        {
+            int retries = 3;
+            bool found = false;
+            string text = action.With["text"];
+
+            while (!found && retries-- > 0)
+            {
+                byte[] imageData = _screenshotManager.TakeScreenshot(windowHandle);
+
+                Console.WriteLine($"Searching for text {text}...");
+
+                if (imageData != null)
+                {
+                    using Pix image = Pix.LoadFromMemory(imageData);
+                    using Page page = _tesseractEngine.Process(image);
+
+                    using ResultIterator iterator = page.GetIterator();
+                    iterator.Begin();
+
+                    do
+                    {
+                        string pageText = iterator.GetText(PageIteratorLevel.Block);
+
+                        if (!String.IsNullOrWhiteSpace(pageText))
+                        {
+                            Console.WriteLine($"Found block {pageText}");
+
+                            if (pageText.Contains(text, StringComparison.OrdinalIgnoreCase))
+                            {
+                                Console.WriteLine("Getting bounding box...");
+
+                                if (iterator.TryGetBoundingBox(PageIteratorLevel.Block, out Rect block))
+                                {
+                                    Rectangle windowRect = NativeMethods.GetWindowRect(windowHandle);
+                                    float centerX = windowRect.Left + (block.X1 + (block.Width / 2f));
+                                    float centerY = windowRect.Top + (block.Y1 + (block.Height / 2f));
+                                    MoveMouseTo(windowHandle, centerX, centerY);
+                                    found = true;
+                                }
+                            }
+                        }
+                    }
+                    while (!found && iterator.Next(PageIteratorLevel.TextLine));
+                }
+            }
+        }
+        else if (action.With.ContainsKey("x") || action.With.ContainsKey("y"))
+        {
+            action.With.TryGetValue("x", out string xString);
+            action.With.TryGetValue("y", out string yString);
+            action.With.TryGetValue("absolute", out string absoluteString);
+
+            Single.TryParse(xString, out float x);
+            Single.TryParse(yString, out float y);
+            Boolean.TryParse(absoluteString, out bool absolute);
+
+            if (!absolute)
+            {
+                Rectangle windowRect = NativeMethods.GetWindowRect(windowHandle);
+                x = windowRect.Left + x;
+                y = windowRect.Top + y;
+            }
+
+            MoveMouseTo(windowHandle, x, y);
+        }
+    }
+
+    private void MoveMouseTo(nint windowHandle, float x, float y)
+    {
+        Console.WriteLine($"Moving mouse to {x}, {y}");
+
+        Rectangle monitorRect = NativeMethods.GetMonitorSize(windowHandle);
+        float normalizedX = x * (65536f / monitorRect.Width);
+        float normalizedY = y * (65536f / monitorRect.Height);
+        _inputSimulator.Mouse.MoveMouseTo(normalizedX, normalizedY);
+    }
+
+    private void MoveMouseBy(JobAction action)
+    {
+        if (action.With.ContainsKey("x") || action.With.ContainsKey("y"))
+        {
+            action.With.TryGetValue("x", out string xString);
+            action.With.TryGetValue("y", out string yString);
+
+            Single.TryParse(xString, out float x);
+            Single.TryParse(yString, out float y);
+
+            Console.WriteLine($"Moving mouse by {x}, {y}");
+
+            _inputSimulator.Mouse.MoveMouseBy((int)x, (int)y);
         }
     }
 
