@@ -139,6 +139,7 @@ public sealed class JobRunner : IDisposable
         }
         finally
         {
+            _sensorMonitor.StopMonitoring();
             _actionRunner.Dispose();
         }
 
@@ -242,17 +243,13 @@ public sealed class JobRunner : IDisposable
 
     private void CenterMouse(nint windowHandle)
     {
+        Rectangle monitorRect = NativeMethods.GetMonitorSize(windowHandle);
         Rectangle windowRect = NativeMethods.GetWindowRect(windowHandle);
-
-        NativeMethods.MoveWindow(windowHandle, 0, 0, windowRect.Width, windowRect.Height, true);
-
-        windowRect = new RawRect();
-        NativeMethods.GetWindowRect(windowHandle, ref windowRect);
-
-        double centerX = windowRect.Left + (windowRect.Width / 2);
-        double centerY = windowRect.Top + (windowRect.Height / 2);
-        _inputSimulator.Mouse.MoveMouseTo(0, 0);
-        _inputSimulator.Mouse.MoveMouseBy((int)centerX / 2, (int)centerY / 2);
+        float windowCenterX = windowRect.Left + (windowRect.Width / 2f);
+        float windowCenterY = windowRect.Top + (windowRect.Height / 2f);
+        float normalizedX = windowCenterX * (65536f / monitorRect.Width);
+        float normalizedY = windowCenterY * (65536f / monitorRect.Height);
+        _inputSimulator.Mouse.MoveMouseTo(normalizedX, normalizedY);
     }
 
     private void CleanupJob(Job job, nint windowHandle)
